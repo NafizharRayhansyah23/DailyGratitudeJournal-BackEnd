@@ -1,0 +1,17 @@
+{
+    "mood_happy": "Bahagia",
+    "mood_sad": "Sedih",
+    "mood_angry": "Marah",
+    "mood_grateful": "Bersyukur",
+  
+    "q1_happy": "Apa yang membuatmu tersenyum hari ini?",
+    "q2_happy": "Siapa atau apa yang kamu syukuri saat ini?",
+    "q3_happy": "Hal kecil apa yang membuat harimu lebih cerah?",
+    "q4_happy": "Pencapaian apa yang kamu banggakan hari ini?",
+  
+    "q1_sad": "Apa yang membuatmu sedih hari ini?",
+    "q2_sad": "Apa yang membantumu melewatinya?",
+    "q3_sad": "Apakah ada seseorang yang mendukungmu?",
+    "q4_sad": "Apa yang bisa kamu lakukan agar lebih baik besok?"
+  }
+  
