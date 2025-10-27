@@ -14,8 +14,8 @@ class FeedbackController extends Controller
             'en' => 'Thank you for your feedback!',
         ],
         'feedback_top' => [
-            'id' => 'Top 5 feedback berhasil diambil.',
-            'en' => 'Top 5 feedback retrieved successfully.',
+            'id' => 'Feedback teratas berhasil diambil.',
+            'en' => 'Top feedback retrieved successfully.',
         ],
         'validation_error' => [
             'id' => 'Data yang dikirim tidak valid.',
@@ -57,11 +57,13 @@ class FeedbackController extends Controller
         ], 201);
     }
 
-    public function getTopFeedback()
+    public function getTopFeedback(Request $request)
     {
+        $limit = (int) $request->query('limit', 10);
+
         $topFeedbacks = Feedback::orderBy('rating', 'desc')
             ->orderBy('created_at', 'desc')
-            ->take(5)
+            ->take($limit)
             ->get();
 
         return response()->json([

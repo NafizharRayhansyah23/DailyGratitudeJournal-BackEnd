@@ -10,6 +10,7 @@ use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\RecapController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\QuoteController;
 
 Route::middleware('throttle:auth.attempts')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
@@ -41,6 +42,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // LogOut
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    Route::get('/quotes/popup', [QuoteController::class, 'getPopupQuote']);
+    Route::get('/quotes/carousel', [QuoteController::class, 'getCarouselQuotes']);
+
 });
 
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {

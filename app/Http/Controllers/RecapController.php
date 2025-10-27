@@ -59,16 +59,15 @@ class RecapController extends Controller
         }
 
         $prompt = $this->buildPrompt($journals, $lang);
-
         $apiKey = env('GEMINI_API_KEY');
+
         if (!$apiKey) {
             return response()->json(['message' => $this->msg('missing_api_key')], 500);
         }
 
         try {
-            // Menambahkan timeout & retry
-            $response = Http::timeout(30) // 30 detik
-                ->retry(3, 1000) // retry 3x dengan jeda 1 detik
+            $response = Http::timeout(30)
+                ->retry(3, 1000)
                 ->post(
                     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={$apiKey}",
                     [
@@ -94,10 +93,12 @@ class RecapController extends Controller
         $recap = $response->json()['candidates'][0]['content']['parts'][0]['text']
             ?? $this->msg('no_recap');
 
+        $recap = preg_replace('/\s+/', ' ', trim($recap));
+
         return response()->json([
             'message' => $this->msg('recap_success'),
             'lang' => $lang,
-            'recap' => trim($recap)
+            'recap' => $recap
         ]);
     }
 
