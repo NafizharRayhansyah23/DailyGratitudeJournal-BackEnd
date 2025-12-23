@@ -19,7 +19,18 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    /*
+    |--------------------------------------------------------------------------
+    | Allowed origins
+    |--------------------------------------------------------------------------
+    |
+    | Use the CORS_ALLOWED_ORIGINS env var to provide a comma-separated list
+    | of allowed frontend origins (e.g. https://app.example.com,https://admin.example.com).
+    | When allowing credentials (cookies/auth) you MUST provide explicit
+    | origins and cannot use '*'.
+    |
+    */
+    'allowed_origins' => array_filter(array_map('trim', explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:3000')))),
 
     'allowed_origins_patterns' => [],
 
@@ -29,6 +40,16 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => false,
+    /*
+    |--------------------------------------------------------------------------
+    | Supports credentials
+    |--------------------------------------------------------------------------
+    |
+    | Set to true if your frontend uses cookies or other credentials (for
+    | example when using Sanctum). When true, do NOT set allowed_origins to
+    | ['*'] — instead provide explicit origins using CORS_ALLOWED_ORIGINS.
+    |
+    */
+    'supports_credentials' => (bool) env('CORS_ALLOW_CREDENTIALS', false),
 
 ];

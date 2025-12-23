@@ -1,3 +1,35 @@
+# public/.htaccess
+# Apache rewrite + CORS fallback for SPA + API passthrough
+RewriteEngine On
+
+# --- CORS fallback (Apache) ---
+# Allowed origins: add/remove domains as needed. Do NOT use * when credentials are used.
+# Example includes local dev and a production frontend domain.
+SetEnvIf Origin "^(https?://(localhost:3000|app\.humicprototyping\.net))$" ORIGIN=$0
+
+<IfModule mod_headers.c>
+    # Set Access-Control-Allow-Origin only when Origin matches the SetEnvIf list
+    Header always set Access-Control-Allow-Origin "%{ORIGIN}e" env=ORIGIN
+    Header always set Access-Control-Allow-Credentials "true" env=ORIGIN
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" env=ORIGIN
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With" env=ORIGIN
+    Header always set Access-Control-Expose-Headers "Content-Length, X-Requested-With" env=ORIGIN
+</IfModule>
+
+# Respond to preflight OPTIONS quickly
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=204,L]
+
+# --- Do not rewrite API routes (let PHP/Laravel handle /api/* normally) ---
+RewriteCond %{REQUEST_URI} ^/api/ [NC]
+RewriteRule .* - [L]
+
+# Flutter Web / SPA routing (if not a real file/folder, serve index.html)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]
+
+# End of file
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
