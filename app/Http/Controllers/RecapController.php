@@ -59,39 +59,71 @@ class RecapController extends Controller
         }
 
         $prompt = $this->buildPrompt($journals, $lang);
-        $apiKey = env('GEMINI_API_KEY');
 
-        if (!$apiKey) {
+        // Prefer GROQ API key (openai-compatible) if present, otherwise fall back to Gemini key
+        $groqKey = env('GROQ_API_KEY');
+        $geminiKey = env('GEMINI_API_KEY');
+
+        if (!$groqKey && !$geminiKey) {
             return response()->json(['message' => $this->msg('missing_api_key')], 500);
         }
 
-        try {
-            $response = Http::timeout(30)
-                ->retry(3, 1000)
-                ->post(
-                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={$apiKey}",
-                    [
-                        'contents' => [
-                            [
-                                'parts' => [
-                                    ['text' => $prompt]
+        // If GROQ key is available, use Groq / OpenAI-compatible Responses API
+        if ($groqKey) {
+            try {
+                $response = Http::withHeaders([
+                    'Authorization' => "Bearer {$groqKey}",
+                    'Content-Type' => 'application/json',
+                ])->timeout(30)
+                    ->retry(3, 1000)
+                    ->post('https://api.groq.com/openai/v1/responses', [
+                        'model' => 'openai/gpt-oss-20b',
+                        'input' => $prompt,
+                    ]);
+            } catch (ConnectionException $e) {
+                return response()->json([
+                    'message' => $this->msg('ai_failed') . ' (' . $e->getMessage() . ')'
+                ], 502);
+            }
+
+            if ($response->failed()) {
+                return response()->json(['message' => $this->msg('ai_failed')], 502);
+            }
+
+            $body = $response->json();
+
+            // Groq/Responses may provide a convenience string output_text, or an output array
+            $recap = $body['output_text'] ?? ($body['output'][0]['content'][0]['text'] ?? null) ?? $this->msg('no_recap');
+        } else {
+            // Fallback: use Gemini (Google) if GROQ key not provided
+            try {
+                $response = Http::timeout(30)
+                    ->retry(3, 1000)
+                    ->post(
+                        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={$geminiKey}",
+                        [
+                            'contents' => [
+                                [
+                                    'parts' => [
+                                        ['text' => $prompt]
+                                    ]
                                 ]
                             ]
                         ]
-                    ]
-                );
-        } catch (ConnectionException $e) {
-            return response()->json([
-                'message' => $this->msg('ai_failed') . ' (' . $e->getMessage() . ')'
-            ], 502);
-        }
+                    );
+            } catch (ConnectionException $e) {
+                return response()->json([
+                    'message' => $this->msg('ai_failed') . ' (' . $e->getMessage() . ')'
+                ], 502);
+            }
 
-        if ($response->failed()) {
-            return response()->json(['message' => $this->msg('ai_failed')], 502);
-        }
+            if ($response->failed()) {
+                return response()->json(['message' => $this->msg('ai_failed')], 502);
+            }
 
-        $recap = $response->json()['candidates'][0]['content']['parts'][0]['text']
-            ?? $this->msg('no_recap');
+            $recap = $response->json()['candidates'][0]['content']['parts'][0]['text']
+                ?? $this->msg('no_recap');
+        }
 
         $recap = preg_replace('/\s+/', ' ', trim($recap));
 
