@@ -18,5 +18,8 @@ class DatabaseSeeder extends Seeder
         //     'name' => 'Test User',
         //     'email' => 'test@example.com',
         // ]);
+
+        // Seed initial admin user (can override with ADMIN_EMAIL / ADMIN_PASSWORD in .env)
+        $this->call(\Database\Seeders\AdminUserSeeder::class);
     }
 }
