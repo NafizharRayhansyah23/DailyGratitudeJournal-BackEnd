@@ -71,15 +71,23 @@ class RecapController extends Controller
         // If GROQ key is available, use Groq / OpenAI-compatible Responses API
         if ($groqKey) {
             try {
+                // Use Groq Chat Completions endpoint with messages (more natural for conversation/chat)
+                $payload = [
+                    'model' => 'openai/gpt-oss-120b',
+                    'messages' => [
+                        ['role' => 'user', 'content' => $prompt]
+                    ],
+                    // tuning knobs — adjust as needed
+                    'temperature' => 0.7,
+                    'max_tokens' => 800,
+                ];
+
                 $response = Http::withHeaders([
                     'Authorization' => "Bearer {$groqKey}",
                     'Content-Type' => 'application/json',
-                ])->timeout(30)
+                ])->timeout(60)
                     ->retry(3, 1000)
-                    ->post('https://api.groq.com/openai/v1/responses', [
-                        'model' => 'openai/gpt-oss-20b',
-                        'input' => $prompt,
-                    ]);
+                    ->post('https://api.groq.com/openai/v1/chat/completions', $payload);
             } catch (ConnectionException $e) {
                 return response()->json([
                     'message' => $this->msg('ai_failed') . ' (' . $e->getMessage() . ')'
@@ -92,8 +100,9 @@ class RecapController extends Controller
 
             $body = $response->json();
 
-            // Groq/Responses may provide a convenience string output_text, or an output array
-            $recap = $body['output_text'] ?? ($body['output'][0]['content'][0]['text'] ?? null) ?? $this->msg('no_recap');
+            // Groq Chat Completions typically returns choices[].message.content
+            // Fallback to output_text or legacy shapes if necessary
+            $recap = $body['choices'][0]['message']['content'] ?? $body['output_text'] ?? ($body['output'][0]['content'][0]['text'] ?? null) ?? $this->msg('no_recap');
         } else {
             // Fallback: use Gemini (Google) if GROQ key not provided
             try {
@@ -158,9 +167,21 @@ class RecapController extends Controller
         }
 
         $prompt .= "---\n\n";
-        $prompt .= $lang === 'id'
-            ? "Sekarang buatkan ringkasannya dalam bahasa Indonesia."
-            : "Now, generate the recap in English.";
+
+        // Add explicit instructions to improve output quality for Groq/OpenAI-like models
+        if ($lang === 'id') {
+            $prompt .= "Instruksi untuk model: Buat ringkasan singkat dalam bahasa Indonesia yang hangat, empatik, dan positif. "
+                . "Panjang ringkasan maksimal 100 kata. Jangan menambahkan informasi yang tidak ada di entri jurnal. "
+                . "Gunakan kalimat sederhana, fokus pada emosi, pola pikir, atau perkembangan pengguna. "
+                . "Keluarkan hanya teks ringkasan dan kemudian 2–3 poin utama (Highlights) — setiap poin 3–7 kata — diawali baris 'Highlights:'. "
+                . "Jika tidak memungkinkan untuk membuat ringkasan, keluarkan persis: '" . $this->msg('no_recap') . "'.";
+        } else {
+            $prompt .= "Instructions for the model: Create a short recap in English that is warm, empathetic, and positive. "
+                . "Keep the recap under 100 words. Do not add information not present in the journal entries. "
+                . "Use simple sentences and focus on emotions, mindset, or progress. "
+                . "Output only the recap text followed by 2–3 short highlight points (3–7 words each) prefixed by a line 'Highlights:'. "
+                . "If you cannot produce a recap, output exactly: '" . $this->msg('no_recap') . "'.";
+        }
 
         return $prompt;
     }
